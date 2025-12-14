@@ -16,7 +16,7 @@ body{
   height:100vh;
   background:linear-gradient(135deg,var(--bg1),var(--bg2),var(--bg3));
   color:white;
-  font-family:Segoe UI,Arial;
+  font-family:Segoe UI,Arial,sans-serif;
   overflow:hidden;
 }
 #menu{
@@ -30,40 +30,15 @@ body{
   border-radius:26px;
   padding:30px 50px;
   box-shadow:0 20px 60px rgba(0,0,0,.7);
-}
-.carousel{
-  display:flex;
-  gap:60px;
-}
-.item{
-  opacity:.4;
-  transform:scale(.75);
-  transition:.3s;
   text-align:center;
 }
-.item.active{
-  opacity:1;
-  transform:scale(1);
-}
-.card{
-  background:#000;
-  border-radius:18px;
-  padding:14px;
-}
-.card img{
-  max-width:260px;
-  border-radius:12px;
-}
-.name{
-  margin-top:14px;
-  font-size:18px;
-}
-.hint{
-  margin-top:20px;
-  font-size:14px;
-  opacity:.6;
-  text-align:center;
-}
+.carousel{display:flex;gap:60px;}
+.item{opacity:.4;transform:scale(.75);transition:.3s;}
+.item.active{opacity:1;transform:scale(1);}
+.card{background:#000;border-radius:18px;padding:14px;}
+.card img{max-width:260px;border-radius:12px;}
+.name{margin-top:14px;font-size:18px;}
+.hint{margin-top:20px;font-size:14px;opacity:.6;}
 canvas{
   display:none;
   width:100vw;
@@ -74,15 +49,14 @@ canvas{
 </style>
 </head>
 
-<body tabindex="0">
+<body tabindex="0" onclick="this.focus()">
 
 <div id="menu">
   <div class="frame">
     <h1>NINTENDO NES</h1>
     <div id="carousel" class="carousel"></div>
     <div class="hint">
-      ⬅️ ➡️ elegir · ESPACIO jugar<br>
-      Q menú · 1 volver · ESC fullscreen
+      ⬅️ ➡️ elegir · ESPACIO jugar · Q menú · 1 inicio · ESC fullscreen
     </div>
   </div>
 </div>
@@ -93,54 +67,31 @@ canvas{
 <script>
 document.body.focus();
 
-/* ================= AUDIO ================= */
-const AudioCtx = window.AudioContext || window.webkitAudioContext;
-const audioCtx = new AudioCtx();
-const scriptNode = audioCtx.createScriptProcessor(4096, 0, 1);
-scriptNode.connect(audioCtx.destination);
-let audioBuffer = [];
+let games=[], selected=0, running=false;
 
-scriptNode.onaudioprocess = e => {
-  const out = e.outputBuffer.getChannelData(0);
-  for(let i=0;i<out.length;i++){
-    out[i] = audioBuffer.length ? audioBuffer.shift() : 0;
-  }
-};
+const carousel=document.getElementById("carousel");
+const canvas=document.getElementById("screen");
+const ctx=canvas.getContext("2d");
+const img=ctx.getImageData(0,0,256,240);
 
-/* ================= ESTADO ================= */
-let games = [];
-let selected = 0;
-let running = false;
-let showMenu = true;
-
-/* ================= ELEMENTOS ================= */
-const carousel = document.getElementById("carousel");
-const menu = document.getElementById("menu");
-const canvas = document.getElementById("screen");
-const ctx = canvas.getContext("2d");
-const img = ctx.getImageData(0,0,256,240);
-
-/* ================= NES ================= */
-const nes = new jsnes.NES({
+/* ===== NES ===== */
+const nes=new jsnes.NES({
   onFrame(frame){
     for(let i=0;i<frame.length;i++){
-      img.data[i*4]   = frame[i] & 255;
-      img.data[i*4+1] = (frame[i] >> 8) & 255;
-      img.data[i*4+2] = (frame[i] >> 16) & 255;
-      img.data[i*4+3] = 255;
+      img.data[i*4]=frame[i]&255;
+      img.data[i*4+1]=(frame[i]>>8)&255;
+      img.data[i*4+2]=(frame[i]>>16)&255;
+      img.data[i*4+3]=255;
     }
     ctx.putImageData(img,0,0);
-  },
-  onAudioSample(l,r){
-    audioBuffer.push((l+r)/2);
   }
 });
 
-/* ================= CARGA JUEGOS ================= */
+/* ===== CARGAR JUEGOS ===== */
 fetch("roms.json")
 .then(r=>r.json())
-.then(j=>{
-  games = j.nes.games;
+.then(data=>{
+  games=data.nes.games;
   draw();
 });
 
@@ -156,15 +107,11 @@ function draw(){
 }
 
 function redraw(){
-  [...carousel.children].forEach((c,i)=>{
-    c.classList.toggle("active",i===selected);
-  });
+  [...carousel.children].forEach((c,i)=>c.classList.toggle("active",i===selected));
 }
 
-/* ================= INICIAR JUEGO ================= */
+/* ===== CARGAR ROM ===== */
 function loadGame(){
-  audioCtx.resume();
-
   fetch(games[selected].file)
   .then(r=>r.arrayBuffer())
   .then(buf=>{
@@ -172,33 +119,26 @@ function loadGame(){
     new Uint8Array(buf).forEach(b=>bin+=String.fromCharCode(b));
     nes.loadROM(bin);
 
-    menu.style.display="none";
+    document.getElementById("menu").style.display="none";
     canvas.style.display="block";
     running=true;
-    showMenu=false;
     document.documentElement.requestFullscreen?.();
   });
 }
 
-/* ================= TECLADO ================= */
+/* ===== TECLADO ===== */
 document.addEventListener("keydown",e=>{
   const k=e.key.toLowerCase();
   if(["arrowleft","arrowright"," ","escape"].includes(k)) e.preventDefault();
 
-  if(showMenu){
+  if(!running){
     if(k==="arrowright"){selected=(selected+1)%games.length;redraw();}
     if(k==="arrowleft"){selected=(selected-1+games.length)%games.length;redraw();}
     if(k===" ") loadGame();
   }
 
-  if(k==="q"){
-    running=false;
-    showMenu=true;
-    canvas.style.display="none";
-    menu.style.display="flex";
-  }
-
-  if(k==="1") location.href="index.html";
+  if(k==="q"){location.href="index.html";}
+  if(k==="1"){location.href="index.html";}
 
   if(k==="escape"){
     document.fullscreenElement
@@ -206,38 +146,54 @@ document.addEventListener("keydown",e=>{
       : document.documentElement.requestFullscreen();
   }
 
-  // NES teclado
-  nes.buttonDown(1, jsnes.Controller.BUTTON_A, k==="z");
-  nes.buttonDown(1, jsnes.Controller.BUTTON_B, k==="x");
-  nes.buttonDown(1, jsnes.Controller.BUTTON_START, k==="enter");
-  nes.buttonDown(1, jsnes.Controller.BUTTON_SELECT, k==="shift");
-  nes.buttonDown(1, jsnes.Controller.BUTTON_UP, k==="arrowup");
-  nes.buttonDown(1, jsnes.Controller.BUTTON_DOWN, k==="arrowdown");
-  nes.buttonDown(1, jsnes.Controller.BUTTON_LEFT, k==="arrowleft");
-  nes.buttonDown(1, jsnes.Controller.BUTTON_RIGHT, k==="arrowright");
+  if(!running) return;
+
+  if(k==="arrowup") nes.buttonDown(1,jsnes.Controller.BUTTON_UP);
+  if(k==="arrowdown") nes.buttonDown(1,jsnes.Controller.BUTTON_DOWN);
+  if(k==="arrowleft") nes.buttonDown(1,jsnes.Controller.BUTTON_LEFT);
+  if(k==="arrowright") nes.buttonDown(1,jsnes.Controller.BUTTON_RIGHT);
+  if(k==="z") nes.buttonDown(1,jsnes.Controller.BUTTON_A);
+  if(k==="x") nes.buttonDown(1,jsnes.Controller.BUTTON_B);
+  if(k==="enter") nes.buttonDown(1,jsnes.Controller.BUTTON_START);
+  if(k==="shift") nes.buttonDown(1,jsnes.Controller.BUTTON_SELECT);
 });
 
-/* ================= MANDO (PS4 / PS5) ================= */
+document.addEventListener("keyup",e=>{
+  const k=e.key.toLowerCase();
+  if(!running) return;
+
+  if(k==="arrowup") nes.buttonUp(1,jsnes.Controller.BUTTON_UP);
+  if(k==="arrowdown") nes.buttonUp(1,jsnes.Controller.BUTTON_DOWN);
+  if(k==="arrowleft") nes.buttonUp(1,jsnes.Controller.BUTTON_LEFT);
+  if(k==="arrowright") nes.buttonUp(1,jsnes.Controller.BUTTON_RIGHT);
+  if(k==="z") nes.buttonUp(1,jsnes.Controller.BUTTON_A);
+  if(k==="x") nes.buttonUp(1,jsnes.Controller.BUTTON_B);
+  if(k==="enter") nes.buttonUp(1,jsnes.Controller.BUTTON_START);
+  if(k==="shift") nes.buttonUp(1,jsnes.Controller.BUTTON_SELECT);
+});
+
+/* ===== GAMEPAD (PS4 / USB) ===== */
 function pollGamepad(){
-  const gp = navigator.getGamepads()[0];
+  if(!running) return;
+  const gp=navigator.getGamepads()[0];
   if(!gp) return;
 
-  nes.buttonDown(1, jsnes.Controller.BUTTON_A, gp.buttons[0]?.pressed); // ✕
-  nes.buttonDown(1, jsnes.Controller.BUTTON_B, gp.buttons[1]?.pressed); // ○
-  nes.buttonDown(1, jsnes.Controller.BUTTON_START, gp.buttons[9]?.pressed); // Options
-  nes.buttonDown(1, jsnes.Controller.BUTTON_SELECT, gp.buttons[8]?.pressed); // Share
+  gp.buttons[12].pressed ? nes.buttonDown(1,jsnes.Controller.BUTTON_UP)    : nes.buttonUp(1,jsnes.Controller.BUTTON_UP);
+  gp.buttons[13].pressed ? nes.buttonDown(1,jsnes.Controller.BUTTON_DOWN)  : nes.buttonUp(1,jsnes.Controller.BUTTON_DOWN);
+  gp.buttons[14].pressed ? nes.buttonDown(1,jsnes.Controller.BUTTON_LEFT)  : nes.buttonUp(1,jsnes.Controller.BUTTON_LEFT);
+  gp.buttons[15].pressed ? nes.buttonDown(1,jsnes.Controller.BUTTON_RIGHT) : nes.buttonUp(1,jsnes.Controller.BUTTON_RIGHT);
 
-  nes.buttonDown(1, jsnes.Controller.BUTTON_UP, gp.buttons[12]?.pressed);
-  nes.buttonDown(1, jsnes.Controller.BUTTON_DOWN, gp.buttons[13]?.pressed);
-  nes.buttonDown(1, jsnes.Controller.BUTTON_LEFT, gp.buttons[14]?.pressed);
-  nes.buttonDown(1, jsnes.Controller.BUTTON_RIGHT, gp.buttons[15]?.pressed);
+  gp.buttons[0].pressed ? nes.buttonDown(1,jsnes.Controller.BUTTON_A) : nes.buttonUp(1,jsnes.Controller.BUTTON_A);
+  gp.buttons[1].pressed ? nes.buttonDown(1,jsnes.Controller.BUTTON_B) : nes.buttonUp(1,jsnes.Controller.BUTTON_B);
+  gp.buttons[9].pressed ? nes.buttonDown(1,jsnes.Controller.BUTTON_START) : nes.buttonUp(1,jsnes.Controller.BUTTON_START);
+  gp.buttons[8].pressed ? nes.buttonDown(1,jsnes.Controller.BUTTON_SELECT) : nes.buttonUp(1,jsnes.Controller.BUTTON_SELECT);
 }
 
-/* ================= LOOP ================= */
+/* ===== LOOP ===== */
 (function loop(){
   if(running){
-    pollGamepad();
     nes.frame();
+    pollGamepad();
   }
   requestAnimationFrame(loop);
 })();
