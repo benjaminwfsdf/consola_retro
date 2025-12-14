@@ -33,7 +33,7 @@ body{
   text-align:center;
 }
 .carousel{display:flex;gap:60px;}
-.item{opacity:.4;transform:scale(.75);transition:.3s;}
+.item{opacity:.4;transform:scale(.75);transition:.3s;text-align:center;}
 .item.active{opacity:1;transform:scale(1);}
 .card{background:#000;border-radius:18px;padding:14px;}
 .card img{max-width:260px;border-radius:12px;}
@@ -49,14 +49,15 @@ canvas{
 </style>
 </head>
 
-<body tabindex="0" onclick="this.focus()">
+<body tabindex="0">
 
 <div id="menu">
   <div class="frame">
     <h1>NINTENDO NES</h1>
     <div id="carousel" class="carousel"></div>
     <div class="hint">
-      ⬅️ ➡️ elegir · ESPACIO jugar · Q menú · 1 inicio · ESC fullscreen
+      ⬅️ ➡️ elegir · ESPACIO jugar<br>
+      Q menú · 1 inicio · ESC fullscreen
     </div>
   </div>
 </div>
@@ -67,31 +68,54 @@ canvas{
 <script>
 document.body.focus();
 
-let games=[], selected=0, running=false;
+/* ================= AUDIO (CLAVE) ================= */
+const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+const audioCtx = new AudioContextClass();
+let audioBuffer = [];
 
-const carousel=document.getElementById("carousel");
-const canvas=document.getElementById("screen");
-const ctx=canvas.getContext("2d");
-const img=ctx.getImageData(0,0,256,240);
+const scriptNode = audioCtx.createScriptProcessor(4096, 0, 1);
+scriptNode.connect(audioCtx.destination);
 
-/* ===== NES ===== */
-const nes=new jsnes.NES({
+scriptNode.onaudioprocess = e => {
+  const out = e.outputBuffer.getChannelData(0);
+  for(let i=0;i<out.length;i++){
+    out[i] = audioBuffer.length ? audioBuffer.shift() : 0;
+  }
+};
+
+/* ================= ESTADO ================= */
+let games = [];
+let selected = 0;
+let running = false;
+
+/* ================= ELEMENTOS ================= */
+const carousel = document.getElementById("carousel");
+const menu = document.getElementById("menu");
+const canvas = document.getElementById("screen");
+const ctx = canvas.getContext("2d");
+const img = ctx.getImageData(0,0,256,240);
+
+/* ================= NES ================= */
+const nes = new jsnes.NES({
   onFrame(frame){
     for(let i=0;i<frame.length;i++){
-      img.data[i*4]=frame[i]&255;
-      img.data[i*4+1]=(frame[i]>>8)&255;
-      img.data[i*4+2]=(frame[i]>>16)&255;
-      img.data[i*4+3]=255;
+      img.data[i*4]   = frame[i] & 255;
+      img.data[i*4+1] = (frame[i] >> 8) & 255;
+      img.data[i*4+2] = (frame[i] >> 16) & 255;
+      img.data[i*4+3] = 255;
     }
     ctx.putImageData(img,0,0);
+  },
+  onAudioSample(l, r){
+    audioBuffer.push((l + r) / 2);
   }
 });
 
-/* ===== CARGAR JUEGOS ===== */
+/* ================= JUEGOS ================= */
 fetch("roms.json")
 .then(r=>r.json())
 .then(data=>{
-  games=data.nes.games;
+  games = data.nes.games;
   draw();
 });
 
@@ -107,11 +131,15 @@ function draw(){
 }
 
 function redraw(){
-  [...carousel.children].forEach((c,i)=>c.classList.toggle("active",i===selected));
+  [...carousel.children].forEach((c,i)=>{
+    c.classList.toggle("active",i===selected);
+  });
 }
 
-/* ===== CARGAR ROM ===== */
+/* ================= CARGAR JUEGO ================= */
 function loadGame(){
+  audioCtx.resume(); // 🔥 obligatorio por política del navegador
+
   fetch(games[selected].file)
   .then(r=>r.arrayBuffer())
   .then(buf=>{
@@ -119,14 +147,14 @@ function loadGame(){
     new Uint8Array(buf).forEach(b=>bin+=String.fromCharCode(b));
     nes.loadROM(bin);
 
-    document.getElementById("menu").style.display="none";
+    menu.style.display="none";
     canvas.style.display="block";
     running=true;
     document.documentElement.requestFullscreen?.();
   });
 }
 
-/* ===== TECLADO ===== */
+/* ================= TECLADO ================= */
 document.addEventListener("keydown",e=>{
   const k=e.key.toLowerCase();
   if(["arrowleft","arrowright"," ","escape"].includes(k)) e.preventDefault();
@@ -137,8 +165,7 @@ document.addEventListener("keydown",e=>{
     if(k===" ") loadGame();
   }
 
-  if(k==="q"){location.href="index.html";}
-  if(k==="1"){location.href="index.html";}
+  if(k==="q" || k==="1") location.href="index.html";
 
   if(k==="escape"){
     document.fullscreenElement
@@ -172,24 +199,24 @@ document.addEventListener("keyup",e=>{
   if(k==="shift") nes.buttonUp(1,jsnes.Controller.BUTTON_SELECT);
 });
 
-/* ===== GAMEPAD (PS4 / USB) ===== */
+/* ================= GAMEPAD ================= */
 function pollGamepad(){
   if(!running) return;
   const gp=navigator.getGamepads()[0];
   if(!gp) return;
 
-  gp.buttons[12].pressed ? nes.buttonDown(1,jsnes.Controller.BUTTON_UP)    : nes.buttonUp(1,jsnes.Controller.BUTTON_UP);
-  gp.buttons[13].pressed ? nes.buttonDown(1,jsnes.Controller.BUTTON_DOWN)  : nes.buttonUp(1,jsnes.Controller.BUTTON_DOWN);
-  gp.buttons[14].pressed ? nes.buttonDown(1,jsnes.Controller.BUTTON_LEFT)  : nes.buttonUp(1,jsnes.Controller.BUTTON_LEFT);
-  gp.buttons[15].pressed ? nes.buttonDown(1,jsnes.Controller.BUTTON_RIGHT) : nes.buttonUp(1,jsnes.Controller.BUTTON_RIGHT);
+  gp.buttons[12]?.pressed ? nes.buttonDown(1,jsnes.Controller.BUTTON_UP)    : nes.buttonUp(1,jsnes.Controller.BUTTON_UP);
+  gp.buttons[13]?.pressed ? nes.buttonDown(1,jsnes.Controller.BUTTON_DOWN)  : nes.buttonUp(1,jsnes.Controller.BUTTON_DOWN);
+  gp.buttons[14]?.pressed ? nes.buttonDown(1,jsnes.Controller.BUTTON_LEFT)  : nes.buttonUp(1,jsnes.Controller.BUTTON_LEFT);
+  gp.buttons[15]?.pressed ? nes.buttonDown(1,jsnes.Controller.BUTTON_RIGHT) : nes.buttonUp(1,jsnes.Controller.BUTTON_RIGHT);
 
-  gp.buttons[0].pressed ? nes.buttonDown(1,jsnes.Controller.BUTTON_A) : nes.buttonUp(1,jsnes.Controller.BUTTON_A);
-  gp.buttons[1].pressed ? nes.buttonDown(1,jsnes.Controller.BUTTON_B) : nes.buttonUp(1,jsnes.Controller.BUTTON_B);
-  gp.buttons[9].pressed ? nes.buttonDown(1,jsnes.Controller.BUTTON_START) : nes.buttonUp(1,jsnes.Controller.BUTTON_START);
-  gp.buttons[8].pressed ? nes.buttonDown(1,jsnes.Controller.BUTTON_SELECT) : nes.buttonUp(1,jsnes.Controller.BUTTON_SELECT);
+  gp.buttons[0]?.pressed ? nes.buttonDown(1,jsnes.Controller.BUTTON_A) : nes.buttonUp(1,jsnes.Controller.BUTTON_A);
+  gp.buttons[1]?.pressed ? nes.buttonDown(1,jsnes.Controller.BUTTON_B) : nes.buttonUp(1,jsnes.Controller.BUTTON_B);
+  gp.buttons[9]?.pressed ? nes.buttonDown(1,jsnes.Controller.BUTTON_START) : nes.buttonUp(1,jsnes.Controller.BUTTON_START);
+  gp.buttons[8]?.pressed ? nes.buttonDown(1,jsnes.Controller.BUTTON_SELECT) : nes.buttonUp(1,jsnes.Controller.BUTTON_SELECT);
 }
 
-/* ===== LOOP ===== */
+/* ================= LOOP ================= */
 (function loop(){
   if(running){
     nes.frame();
