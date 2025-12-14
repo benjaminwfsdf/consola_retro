@@ -1,0 +1,42 @@
+{
+  "nes": {
+    "name": "Nintendo Entertainment System",
+    "cover": "covers/nes.png",
+    "emulator": "nes",
+    "games": [
+      {
+        "name": "Super Mario Bros",
+        "file": "roms/nes/Super Mario Bros. (World).nes",
+        "cover": "covers/mario.png"
+      },
+      {
+        "name": "Super Mario Bros 2",
+        "file": "roms/nes/Super Mario Bros. 2 (Europe).nes",
+        "cover": "covers/mario2.png"
+      },
+      {
+        "name": "Super Mario Bros 3",
+        "file": "roms/nes/Super Mario Bros. 3 (USA).nes",
+        "cover": "covers/mario3.png"
+      }
+    ]
+  },
+
+  "gba": {
+    "name": "Game Boy Advance",
+    "cover": "covers/gba.png",
+    "emulator": "gba",
+    "games": [
+      {
+        "name": "Pokémon Rojofuego",
+        "file": "roms/gba/Pokemon Rojo Fuego.gba",
+        "cover": "covers/pokemonrojofuego.png"
+      },
+      {
+        "name": "Pokémon Esmeralda",
+        "file": "roms/gba/pokemon_esmeralda_esp.gba",
+        "cover": "covers/pokemonesmeralda.png"
+      }
+    ]
+  }
+}

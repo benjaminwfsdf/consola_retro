@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>Retro Console</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<style>
+:root{
+  --bg1:#0f2027;
+  --bg2:#203a43;
+  --bg3:#2c5364;
+}
+body{
+  margin:0;
+  height:100vh;
+  background:linear-gradient(135deg,var(--bg1),var(--bg2),var(--bg3));
+  color:white;
+  font-family:Segoe UI,Arial,sans-serif;
+  overflow:hidden;
+}
+#menu{
+  height:100vh;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+}
+h1{letter-spacing:3px;margin-bottom:25px;}
+.frame{
+  background:linear-gradient(180deg,#0b1220,#111827);
+  border-radius:26px;
+  padding:30px 50px;
+  box-shadow:0 20px 60px rgba(0,0,0,.7);
+}
+.carousel{display:flex;gap:60px;}
+.item{opacity:.4;transform:scale(.75);transition:.3s;text-align:center;}
+.item.active{opacity:1;transform:scale(1);}
+.card{background:#000;border-radius:18px;padding:14px;}
+.card img{max-width:260px;border-radius:12px;}
+.name{margin-top:16px;font-size:18px;}
+.hint{margin-top:20px;font-size:14px;opacity:.6;}
+</style>
+</head>
+
+<body tabindex="0" onclick="this.focus()">
+<div id="menu">
+  <h1>SELECCIONA CONSOLA</h1>
+  <div class="frame">
+    <div id="carousel" class="carousel"></div>
+    <div class="hint">⬅️ ➡️ elegir · ESPACIO entrar · ESC fullscreen</div>
+  </div>
+</div>
+
+<script>
+document.body.focus();
+
+let data={}, keys=[], selected=0;
+const carousel=document.getElementById("carousel");
+
+fetch("roms.json")
+.then(r=>r.json())
+.then(json=>{
+  data=json;
+  keys=Object.keys(data);
+  draw();
+});
+
+function draw(){
+  carousel.innerHTML="";
+  keys.forEach((k,i)=>{
+    const c=data[k];
+    carousel.innerHTML+=`
+      <div class="item ${i===0?"active":""}">
+        <div class="card"><img src="${c.cover}"></div>
+        <div class="name">${c.name}</div>
+      </div>`;
+  });
+}
+
+function redraw(){
+  [...carousel.children].forEach((c,i)=>c.classList.toggle("active",i===selected));
+}
+
+document.addEventListener("keydown",e=>{
+  const k=e.key.toLowerCase();
+  if(["arrowleft","arrowright"," ","escape"].includes(k)) e.preventDefault();
+
+  if(k==="arrowright"){selected=(selected+1)%keys.length;redraw();}
+  if(k==="arrowleft"){selected=(selected-1+keys.length)%keys.length;redraw();}
+
+  if(k===" "){
+    const emu=data[keys[selected]].emulator;
+    location.href = emu==="nes" ? "nes.html" : "gba.html";
+  }
+
+  if(k==="escape"){
+    document.fullscreenElement
+      ? document.exitFullscreen()
+      : document.documentElement.requestFullscreen();
+  }
+});
+</script>
+</body>
+</html>

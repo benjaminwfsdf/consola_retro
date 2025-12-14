@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>Nintendo NES</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<style>
+:root{
+  --bg1:#0f2027;
+  --bg2:#203a43;
+  --bg3:#2c5364;
+}
+body{
+  margin:0;height:100vh;
+  background:linear-gradient(135deg,var(--bg1),var(--bg2),var(--bg3));
+  color:white;font-family:Segoe UI,Arial;
+  overflow:hidden;
+}
+#menu{
+  height:100vh;display:flex;
+  align-items:center;justify-content:center;
+}
+.frame{
+  background:linear-gradient(180deg,#0b1220,#111827);
+  border-radius:26px;
+  padding:30px 50px;
+  box-shadow:0 20px 60px rgba(0,0,0,.7);
+}
+.carousel{display:flex;gap:60px;}
+.item{opacity:.4;transform:scale(.75);transition:.3s;text-align:center;}
+.item.active{opacity:1;transform:scale(1);}
+.card{background:#000;border-radius:18px;padding:14px;}
+.card img{max-width:260px;border-radius:12px;}
+.name{margin-top:14px;font-size:18px;}
+.hint{margin-top:20px;font-size:14px;opacity:.6;text-align:center;}
+canvas{
+  display:none;width:100vw;height:100vh;
+  image-rendering:pixelated;background:black;
+}
+</style>
+</head>
+
+<body tabindex="0">
+
+<div id="menu">
+  <div class="frame">
+    <h1>NINTENDO NES</h1>
+    <div id="carousel" class="carousel"></div>
+    <div class="hint">
+      ⬅️ ➡️ elegir · ESPACIO jugar · Q menú · 1 inicio · ESC fullscreen
+    </div>
+  </div>
+</div>
+
+<canvas id="screen" width="256" height="240"></canvas>
+
+<script src="jsnes.min.js"></script>
+<script>
+document.body.focus();
+
+/* ================= ESTADO ================= */
+let games=[], selected=0, running=false;
+
+/* ================= ELEMENTOS ================= */
+const carousel=document.getElementById("carousel");
+const menu=document.getElementById("menu");
+const canvas=document.getElementById("screen");
+const ctx=canvas.getContext("2d");
+const img=ctx.getImageData(0,0,256,240);
+
+/* ================= NES ================= */
+const nes=new jsnes.NES({
+  onFrame(frame){
+    for(let i=0;i<frame.length;i++){
+      img.data[i*4]   = frame[i] & 255;
+      img.data[i*4+1] = (frame[i] >> 8) & 255;
+      img.data[i*4+2] = (frame[i] >> 16) & 255;
+      img.data[i*4+3] = 255;
+    }
+    ctx.putImageData(img,0,0);
+  }
+});
+
+/* ================= CARGAR JUEGOS ================= */
+fetch("roms.json")
+.then(r=>r.json())
+.then(j=>{
+  games=j.nes.games;
+  draw();
+});
+
+function draw(){
+  carousel.innerHTML="";
+  games.forEach((g,i)=>{
+    carousel.innerHTML+=`
+      <div class="item ${i===selected?"active":""}">
+        <div class="card"><img src="${g.cover}"></div>
+        <div class="name">${g.name}</div>
+      </div>`;
+  });
+}
+
+function redraw(){
+  [...carousel.children]
+    .forEach((c,i)=>c.classList.toggle("active",i===selected));
+}
+
+/* ================= VOLVER AL MENÚ NES ================= */
+function backToMenu(){
+  running=false;
+  menu.style.display="flex";
+  canvas.style.display="none";
+}
+
+/* ================= CARGAR JUEGO ================= */
+function loadGame(){
+  fetch(games[selected].file)
+  .then(r=>r.arrayBuffer())
+  .then(buf=>{
+    let bin="";
+    new Uint8Array(buf).forEach(b=>bin+=String.fromCharCode(b));
+    nes.loadROM(bin);
+    menu.style.display="none";
+    canvas.style.display="block";
+    running=true;
+    document.documentElement.requestFullscreen?.();
+  });
+}
+
+/* ================= TECLADO ================= */
+document.addEventListener("keydown",e=>{
+  const k=e.key.toLowerCase();
+  if(["arrowleft","arrowright"," ","escape","q"].includes(k)) e.preventDefault();
+
+  // ----- MENÚ -----
+  if(!running){
+    if(k==="arrowright"){selected=(selected+1)%games.length;redraw();}
+    if(k==="arrowleft"){selected=(selected-1+games.length)%games.length;redraw();}
+    if(k===" ") loadGame();
+    if(k==="1") location.href="index.html";
+    if(k==="escape"){
+      document.fullscreenElement
+        ? document.exitFullscreen()
+        : document.documentElement.requestFullscreen();
+    }
+    return;
+  }
+
+  // ----- Q → VOLVER AL MENÚ NES -----
+  if(k==="q"){
+    backToMenu();
+    return;
+  }
+
+  // ----- CONTROLES NES -----
+  if(k==="z") nes.buttonDown(1, jsnes.Controller.BUTTON_A);
+  if(k==="x") nes.buttonDown(1, jsnes.Controller.BUTTON_B);
+  if(k==="enter") nes.buttonDown(1, jsnes.Controller.BUTTON_START);
+  if(k==="shift") nes.buttonDown(1, jsnes.Controller.BUTTON_SELECT);
+  if(k==="arrowup") nes.buttonDown(1, jsnes.Controller.BUTTON_UP);
+  if(k==="arrowdown") nes.buttonDown(1, jsnes.Controller.BUTTON_DOWN);
+  if(k==="arrowleft") nes.buttonDown(1, jsnes.Controller.BUTTON_LEFT);
+  if(k==="arrowright") nes.buttonDown(1, jsnes.Controller.BUTTON_RIGHT);
+});
+
+document.addEventListener("keyup",e=>{
+  const k=e.key.toLowerCase();
+  if(!running) return;
+
+  if(k==="z") nes.buttonUp(1, jsnes.Controller.BUTTON_A);
+  if(k==="x") nes.buttonUp(1, jsnes.Controller.BUTTON_B);
+  if(k==="enter") nes.buttonUp(1, jsnes.Controller.BUTTON_START);
+  if(k==="shift") nes.buttonUp(1, jsnes.Controller.BUTTON_SELECT);
+  if(k==="arrowup") nes.buttonUp(1, jsnes.Controller.BUTTON_UP);
+  if(k==="arrowdown") nes.buttonUp(1, jsnes.Controller.BUTTON_DOWN);
+  if(k==="arrowleft") nes.buttonUp(1, jsnes.Controller.BUTTON_LEFT);
+  if(k==="arrowright") nes.buttonUp(1, jsnes.Controller.BUTTON_RIGHT);
+});
+
+/* ================= GAMEPAD (PS4) ================= */
+function pollGamepad(){
+  const gp=navigator.getGamepads()[0];
+  if(!gp || !running) return;
+
+  // Q equivalente → Share + Options juntos
+  if(gp.buttons[8].pressed && gp.buttons[9].pressed){
+    backToMenu();
+    return;
+  }
+
+  nes.buttonDown(1, jsnes.Controller.BUTTON_A, gp.buttons[0].pressed);
+  nes.buttonDown(1, jsnes.Controller.BUTTON_B, gp.buttons[1].pressed);
+  nes.buttonDown(1, jsnes.Controller.BUTTON_START, gp.buttons[9].pressed);
+  nes.buttonDown(1, jsnes.Controller.BUTTON_SELECT, gp.buttons[8].pressed);
+
+  nes.buttonDown(1, jsnes.Controller.BUTTON_UP, gp.axes[1]<-0.5);
+  nes.buttonDown(1, jsnes.Controller.BUTTON_DOWN, gp.axes[1]>0.5);
+  nes.buttonDown(1, jsnes.Controller.BUTTON_LEFT, gp.axes[0]<-0.5);
+  nes.buttonDown(1, jsnes.Controller.BUTTON_RIGHT, gp.axes[0]>0.5);
+}
+
+/* ================= LOOP ================= */
+(function loop(){
+  if(running){
+    pollGamepad();
+    nes.frame();
+  }
+  requestAnimationFrame(loop);
+})();
+</script>
+
+</body>
+</html>

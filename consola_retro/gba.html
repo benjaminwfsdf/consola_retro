@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>Game Boy Advance</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<style>
+:root{
+  --bg1:#0f2027;
+  --bg2:#203a43;
+  --bg3:#2c5364;
+}
+body{
+  margin:0;
+  height:100vh;
+  background:linear-gradient(135deg,var(--bg1),var(--bg2),var(--bg3));
+  color:white;
+  font-family:Segoe UI,Arial,sans-serif;
+  overflow:hidden;
+}
+#menu{
+  position:absolute;
+  inset:0;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  z-index:10;
+}
+.frame{
+  background:linear-gradient(180deg,#0b1220,#111827);
+  border-radius:26px;
+  padding:30px 50px;
+  box-shadow:0 20px 60px rgba(0,0,0,.7);
+  text-align:center;
+}
+.carousel{display:flex;gap:50px;}
+.item{opacity:.4;transform:scale(.75);transition:.3s;text-align:center;}
+.item.active{opacity:1;transform:scale(1);}
+.card{background:#000;padding:14px;border-radius:18px;}
+.card img{max-width:220px;border-radius:12px;}
+.name{margin-top:12px;font-size:18px;}
+.hint{margin-top:18px;font-size:14px;opacity:.6;}
+#game{width:100vw;height:100vh;}
+</style>
+</head>
+
+<body tabindex="0" onclick="this.focus()">
+
+<div id="menu">
+  <div class="frame">
+    <h1>GAME BOY ADVANCE</h1>
+    <div id="carousel" class="carousel"></div>
+    <div class="hint">⬅️ ➡️ elegir · ESPACIO jugar · 1 volver · ESC fullscreen</div>
+  </div>
+</div>
+
+<div id="game"></div>
+
+<script>
+document.body.focus();
+
+let games=[], selected=0;
+
+fetch("roms.json")
+.then(r=>r.json())
+.then(j=>{
+  games=j.gba.games;
+  draw();
+});
+
+function draw(){
+  const c=document.getElementById("carousel");
+  c.innerHTML="";
+  games.forEach((g,i)=>{
+    c.innerHTML+=`
+      <div class="item ${i===0?"active":""}">
+        <div class="card"><img src="${g.cover}"></div>
+        <div class="name">${g.name}</div>
+      </div>`;
+  });
+}
+
+function redraw(){
+  [...document.querySelectorAll(".item")]
+    .forEach((el,i)=>el.classList.toggle("active",i===selected));
+}
+
+document.addEventListener("keydown",e=>{
+  const k=e.key.toLowerCase();
+  if(["arrowleft","arrowright"," "].includes(k)) e.preventDefault();
+
+  if(k==="arrowright"){selected=(selected+1)%games.length;redraw();}
+  if(k==="arrowleft"){selected=(selected-1+games.length)%games.length;redraw();}
+  if(k===" ") startGame();
+
+  if(k==="escape"){
+    document.fullscreenElement
+      ? document.exitFullscreen()
+      : document.documentElement.requestFullscreen();
+  }
+  if(k==="1") location.href="index.html";
+});
+
+function startGame(){
+  const g=games[selected];
+
+  window.EJS_player="#game";
+  window.EJS_core="gba";
+  window.EJS_gameUrl=g.file;
+  window.EJS_pathtodata="data/";
+  window.EJS_startOnLoad=true;
+  window.EJS_fullscreenOnStart=true;
+
+  document.getElementById("menu").style.display="none";
+
+  const s=document.createElement("script");
+  s.src="data/loader.js";
+  document.body.appendChild(s);
+}
+</script>
+
+</body>
+</html>
