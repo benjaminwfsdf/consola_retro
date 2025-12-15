@@ -18,7 +18,13 @@
         "name": "Super Mario Bros 3",
         "file": "roms/nes/Super Mario Bros. 3 (USA).nes",
         "cover": "covers/mario3.png"
-      }
+      },
+ {
+        "name": "Donkey Kong",
+        "file": "roms/nes/Donkey Kong (World) (Rev A).nes",
+        "cover": "covers/donkeykong.png"
+ }
+    
     ]
   },
 
@@ -40,3 +46,4 @@
     ]
   }
 }
+
