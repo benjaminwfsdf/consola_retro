@@ -19,12 +19,34 @@
         "file": "roms/nes/Super Mario Bros. 3 (USA).nes",
         "cover": "covers/mario3.png"
       },
- {
+      {
         "name": "Donkey Kong",
         "file": "roms/nes/Donkey Kong (World) (Rev A).nes",
         "cover": "covers/donkeykong.png"
- }
-    
+      }
+    ]
+  },
+
+  "snes": {
+    "name": "Super Nintendo",
+    "cover": "covers/supernintendo.png",
+    "emulator": "snes",
+    "games": [
+      {
+        "name": "Super Mario World",
+        "file": "roms/snes/Super Mario World (U) [!].smc",
+        "cover": "covers/supermarioworld.png"
+      },
+      {
+        "name": "Donkey Kong Country",
+        "file": "roms/snes/Donkey Kong Country (U) (V1.2) [!].smc",
+        "cover": "covers/koncountry.png"
+      },
+      {
+        "name": "Super Mario Kart",
+        "file": "roms/snes/Super Mario Kart (USA).sfc",
+        "cover": "covers/mariokart.png"
+      }
     ]
   },
 
@@ -46,4 +68,3 @@
     ]
   }
 }
-
