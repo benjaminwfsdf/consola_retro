@@ -91,7 +91,9 @@ document.addEventListener("keydown",e=>{
 
   if(k===" "){
     const emu=data[keys[selected]].emulator;
-    location.href = emu==="nes" ? "nes.html" : "gba.html";
+    if(emu==="nes")  location.href="nes.html";
+    if(emu==="snes") location.href="snes.html";
+    if(emu==="gba")  location.href="gba.html";
   }
 
   if(k==="escape"){
