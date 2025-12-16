@@ -4,43 +4,44 @@
 <meta charset="UTF-8">
 <title>Super Nintendo</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
 <style>
-:root{--bg1:#0f2027;--bg2:#203a43;--bg3:#2c5364;}
 body{
-  margin:0;height:100vh;
-  background:linear-gradient(135deg,var(--bg1),var(--bg2),var(--bg3));
-  color:white;font-family:Segoe UI,Arial;
+  margin:0;
+  height:100vh;
+  background:linear-gradient(135deg,#0f2027,#203a43,#2c5364);
+  color:white;
+  font-family:Segoe UI,Arial;
   overflow:hidden;
 }
 #menu{
-  position:absolute;inset:0;
-  display:flex;align-items:center;justify-content:center;
+  position:absolute;
+  inset:0;
+  display:flex;
+  align-items:center;
+  justify-content:center;
 }
 .frame{
-  background:linear-gradient(180deg,#0b1220,#111827);
-  border-radius:26px;
+  background:#0b1220;
   padding:30px 50px;
-  box-shadow:0 20px 60px rgba(0,0,0,.7);
+  border-radius:26px;
   text-align:center;
 }
-.carousel{display:flex;gap:60px;}
-.item{opacity:.4;transform:scale(.75);transition:.3s;}
-.item.active{opacity:1;transform:scale(1);}
-.card{background:#000;border-radius:18px;padding:14px;}
-.card img{max-width:260px;border-radius:12px;}
-.name{margin-top:14px;font-size:18px;}
-.hint{margin-top:20px;font-size:14px;opacity:.6;}
-#game{width:100vw;height:100vh;display:none;}
+.carousel{display:flex;gap:50px;}
+.item{opacity:.4;transform:scale(.75);transition:.3s}
+.item.active{opacity:1;transform:scale(1)}
+.card img{max-width:220px;border-radius:12px}
+.hint{opacity:.6;margin-top:15px}
+#game{width:100vw;height:100vh;display:none}
 </style>
 </head>
 
-<body tabindex="0" onclick="this.focus()">
+<body tabindex="0">
+
 <div id="menu">
   <div class="frame">
     <h1>SUPER NINTENDO</h1>
     <div id="carousel" class="carousel"></div>
-    <div class="hint">⬅️ ➡️ elegir · ESPACIO jugar · Q / 1 volver · ESC fullscreen</div>
+    <div class="hint">⬅️ ➡️ elegir · ESPACIO jugar · Q volver</div>
   </div>
 </div>
 
@@ -63,14 +64,14 @@ function draw(){
     c.innerHTML+=`
       <div class="item ${i===0?"active":""}">
         <div class="card"><img src="${g.cover}"></div>
-        <div class="name">${g.name}</div>
+        <div>${g.name}</div>
       </div>`;
   });
 }
 
 function redraw(){
   [...document.querySelectorAll(".item")]
-    .forEach((el,i)=>el.classList.toggle("active",i===selected));
+  .forEach((e,i)=>e.classList.toggle("active",i===selected));
 }
 
 document.addEventListener("keydown",e=>{
@@ -80,26 +81,20 @@ document.addEventListener("keydown",e=>{
   if(!started){
     if(k==="arrowright"){selected=(selected+1)%games.length;redraw();}
     if(k==="arrowleft"){selected=(selected-1+games.length)%games.length;redraw();}
-    if(k===" ") startGame();
+    if(k===" "){start();}
   }
 
-  if(k==="q"||k==="1") location.href="index.html";
-
-  if(k==="escape"){
-    document.fullscreenElement
-      ? document.exitFullscreen()
-      : document.documentElement.requestFullscreen();
-  }
+  if(k==="q") location.href="index.html";
 });
 
-function startGame(){
+function start(){
   if(started) return;
   started=true;
-  const game=games[selected];
+  const g=games[selected];
 
   window.EJS_player="#game";
   window.EJS_core="snes";
-  window.EJS_gameUrl=game.file;
+  window.EJS_gameUrl=g.file;
   window.EJS_pathtodata="data/";
   window.EJS_startOnLoad=true;
   window.EJS_fullscreenOnStart=true;
@@ -112,5 +107,6 @@ function startGame(){
   document.body.appendChild(s);
 }
 </script>
+
 </body>
 </html>
